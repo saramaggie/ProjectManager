@@ -5,6 +5,7 @@ import os
 import platform
 import re
 import operator
+import shutil
 
 from .json_file import JsonFile
 
@@ -483,6 +484,22 @@ class Manager:
 
         sublime.set_timeout(show_input_panel, 100)
 
+    def _archive_project(self, project):
+        '''Move project to Archive-folder'''
+        pfile = pretty_path(self.window.project_file_name())
+        if not pfile:
+            sublime.message_dialog('Project file not found!')
+            return
+        answer = sublime.ok_cancel_dialog('Archive %s?' % os.path.basename(pfile))
+        if answer is True:
+            j = JsonFile(os.path.join(self.primary_dir, 'archive.json'))
+            data = j.load([])
+            if pfile not in data:
+                data.append(pfile)
+                j.save(data)
+
+    def archive_project(self, project):
+        sublime.set_timeout(lambda: self._archive_project(project), 100)
 
 def cancellable(func):
     def _ret(self, action):
@@ -537,6 +554,8 @@ class ProjectManager(sublime_plugin.WindowCommand):
             self.manager.import_sublime_project()
         elif action == 'clear_recent_projects':
             self.manager.clear_recent_projects()
+        elif action == 'archive_projects':
+            self.manager.archive_projects()
         elif action == 'remove_dead_projects':
             self.manager.clean_dead_projects()
         else:
@@ -559,6 +578,7 @@ class ProjectManager(sublime_plugin.WindowCommand):
             ['Add New Project', 'Add current folders to Project Manager'],
             ['Import Project', 'Import current .sublime-project file'],
             ['Clear Recent Projects', 'Clear Recent Projects'],
+            ['Archive Projects', 'Archive Projects'],   #Custom
             ['Remove Dead Projects', 'Remove Dead Projects']
         ]
 
@@ -574,7 +594,9 @@ class ProjectManager(sublime_plugin.WindowCommand):
                 self.run(action='import_sublime_project')
             elif a == 8:
                 self.run(action='clear_recent_projects')
-            elif a == 9:
+            elif a == 9:    # Custom
+                self.run(action='archive_projects')
+            elif a == 10:
                 self.run(action='remove_dead_projects')
 
         self.show_quick_panel(items, callback)
